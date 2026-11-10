@@ -7,7 +7,12 @@ const portIndex=process.argv.indexOf('--port');
 const port=Number(portIndex<0?process.env.PORT||3000:process.argv[portIndex+1]);
 const db=new DatabaseSync(':memory:');
 db.exec(readFileSync('drizzle/0000_workspace.sql','utf8'));
-const DB={prepare(sql){const query=db.prepare(sql);return {first:()=>query.get(),bind:(...params)=>({run:()=>({meta:query.run(...params)})})};}};
+db.exec(readFileSync('drizzle/0001_research_drafts.sql','utf8'));
+const DB={prepare(sql){
+  const query=db.prepare(sql);
+  const bind=(...params)=>({first:()=>query.get(...params),all:()=>({results:query.all(...params)}),run:()=>({meta:query.run(...params)})});
+  return {...bind(),bind};
+}};
 createServer(async (req,res)=>{
   const chunks=[];
   for await (const chunk of req) chunks.push(chunk);

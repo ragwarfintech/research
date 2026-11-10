@@ -118,10 +118,41 @@ function profileRecords(){
  return state.profiles.map((r,i)=>({r,i})).filter(({r})=>(r.ticker+' '+r.title+' '+r.type).toLowerCase().includes(query.toLowerCase()))
  .map(({r,i})=>record(r.ticker+' · '+r.title,badge(r.type+' · '+r.status,r.status==='Exception'?'warn':''),r.note,r.source,btn('Edit','profile:'+i))).join('')||'<p>No matching profiles. Add a company or fund profile to begin.</p>';
 }
+let journalReports, journalLoading=false;
+async function loadJournal(){
+ journalLoading=true;
+ try {
+  const response=await fetch('/api/research-journal');
+  if(!response.ok)throw Error();
+  journalReports=(await response.json()).reports;
+ }catch{journalReports=null;}
+ finally{journalLoading=false;if(page()==='daily')render();}
+}
+function journalReport(r){
+ const draft=r.decision===null;
+ const sections=[['Business',r.business],['Financials',r.financials],['Valuation',r.valuation],['Ethical screening',r.ethics],['Open questions',r.questions]];
+ return card('<article class="record"><div class="section-head"><h3>'+esc(r.ticker+' · '+r.title)+'</h3>'+badge(draft?'Awaiting review':r.decision==='published'?'Published':'Rejected',draft?'warn':'neutral')+'</div>'+
+ '<p class="small">'+esc(r.date)+' · Methodology '+esc(r.methodology)+(draft?'':' · Reviewed by '+esc(r.reviewer)+' on '+esc(r.reviewedAt.slice(0,10)))+'</p>'+
+ sections.map(([label,value])=>'<h3 class="spaced">'+label+'</h3><p>'+esc(value)+'</p>').join('')+
+ '<div class="actions">'+r.sources.map((source,i)=>link(source,'Source '+(i+1)+' ↗')).join('')+'</div>'+
+ (draft?'<form data-review="'+esc(r.id)+'" class="actions spaced"><label>Reviewer name<input name="reviewer" required maxlength="120" autocomplete="name"></label><button class="primary" name="decision" value="published">Approve and publish</button><button class="outline" name="decision" value="rejected">Reject</button></form>':'')+'</article>');
+}
+function agentJournal(){
+ if(journalReports===undefined&&!journalLoading)loadJournal();
+ const reports=journalReports??[];
+ const pending=reports.filter(r=>r.decision===null);
+ const published=reports.filter(r=>r.decision==='published');
+ const rejected=reports.filter(r=>r.decision==='rejected');
+ return '<div class="stack spaced">'+card(heading('Agent review queue','Reports require human approval before appearing in the published journal.')+
+ (journalLoading?'<p>Loading reports…</p>':journalReports===null?'<p>Journal unavailable. Reload to retry.</p>':pending.length?'<p>'+pending.length+' pending</p>':'<p>No pending drafts.</p>'))+
+ pending.map(journalReport).join('')+
+ (published.length?'<h2>Published research</h2>'+published.map(journalReport).join(''):'')+
+ (rejected.length?'<details class="card"><summary>Rejected research ('+rejected.length+')</summary><div class="stack spaced">'+rejected.map(journalReport).join('')+'</div></details>':'')+'</div>';
+}
 function daily(){
  return intro('Daily company research','Log company research, source evidence and questions for supervised review.',btn('＋ Add entry','daily',true))+boundary+
  '<div class="records">'+(state.daily.map((r,i)=>({r,i})).sort((a,b)=>b.r.date.localeCompare(a.r.date)).map(({r,i})=>record(r.ticker+' · '+r.title,badge(r.date,'neutral'),r.note,r.source,btn('Edit','daily:'+i))).join('')||
- card('<h2>Research journal</h2><p class="spaced">Add the first entry from the daily company research briefing or from your own due diligence. Record business fundamentals, ethical findings and open questions with the source.</p>'))+'</div>';
+ card('<h2>Research journal</h2><p class="spaced">Add the first entry from the daily company research briefing or from your own due diligence. Record business fundamentals, ethical findings and open questions with the source.</p>'))+'</div>'+agentJournal();
 }
 function tracking(e){
  const forms=e.holdings.filter(h=>h.symbol).map(h=>[esc(h.ticker),esc(h.symbol),days(h.entryDate||e.inception),h.entry??'—',h.units??'—',h.price??'—',days(h.priceDate)]);
@@ -322,6 +353,23 @@ $('main').addEventListener('click',event=>{
  const action=button.dataset.action;
  if(action==='trackingcsv')trackingCsv();
  else if(action)openEditor(action);
+});
+$('main').addEventListener('submit',async event=>{
+ const form=event.target;
+ if(!form.dataset.review)return;
+ event.preventDefault();
+ if(form.dataset.saving)return;
+ form.dataset.saving='true';
+ try{
+  const response=await fetch('/api/research-journal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   id:form.dataset.review,reviewer:new FormData(form).get('reviewer'),decision:event.submitter?.value
+  })});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error);
+  toast(data.decision==='published'?'Research published to the private journal':'Draft rejected');
+  await loadJournal();
+ }catch(error){toast(error.message);}
+ finally{delete form.dataset.saving;}
 });
 $('main').addEventListener('input',event=>{
  if(event.target.id==='query'){query=event.target.value;$('profiles').innerHTML=profileRecords();}

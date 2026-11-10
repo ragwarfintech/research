@@ -39,3 +39,9 @@ The **About Ragwar Fintech** view uses a built-in profile until a published Cont
 4. For local development, copy `.env.example` to `.env`, fill it in, and run `node --env-file=.env scripts/preview.mjs`. On the deployed Site, set the same variables in its environment and redeploy.
 
 The Worker reads the published profile via the Content Delivery API. The browser calls only the Site's `/api/profile` endpoint. Unavailable or incomplete CMS entries use the built-in profile.
+
+## Daily research pilot
+
+The Site MCP tool `submit_research_draft` saves one company report per research date and ticker. A repeat submission returns the stored record and preserves its review decision. Set `RESEARCH_WRITER_EMAIL` to the Site account authorized to submit drafts. Keep this deployment owner-only. The Site access gate protects the journal and its review endpoint.
+
+In **Daily Research**, open a draft, inspect the sources, and enter the reviewer name to approve and publish or reject it. Publication adds the report to the private journal. It requires no Site redeployment.

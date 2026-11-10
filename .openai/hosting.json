@@ -1,3 +1,4 @@
 {
-  "d1": "DB"
+  "d1": "DB",
+  "capabilities": ["mcp"]
 }
