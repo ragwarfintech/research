@@ -1,2 +1,5 @@
 dist/
 .sites/
+.env
+.env.*
+!.env.example

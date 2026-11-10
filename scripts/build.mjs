@@ -6,4 +6,4 @@ for (const [url,file,type] of [['/','index.html','text/html'],['/style.css','sty
 await mkdir('dist/server',{recursive:true});
 await mkdir('dist/.openai',{recursive:true});
 await copyFile('.openai/hosting.json','dist/.openai/hosting.json');
-await writeFile('dist/server/index.js', 'const assets = '+JSON.stringify(assets)+';\n'+await readFile('src/worker.js','utf8'));
+await writeFile('dist/server/index.js', 'const assets = '+JSON.stringify(assets)+';\n'+(await Promise.all(['contentful.js','worker.js'].map(file=>readFile('src/'+file,'utf8')))).join('\n'));

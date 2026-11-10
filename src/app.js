@@ -18,9 +18,10 @@ const paths={
  daily:'M4 6h16v15H4zM8 3v5m8-5v5M4 11h16',
  tracking:'M10 13a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-2 2m2 6a4 4 0 0 0-6 0l-4 4a4 4 0 0 0 6 6l2-2',
  exceptions:'M12 3l10 17H2zM12 9v5m0 3v1',
+ about:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-10v6m0-10v1',
  governance:'M5 3h14v18H5zM8 8h8m-8 4h8m-8 4h5'
 };
-const groups=[['EXPERIMENT',['overview','Overview'],['performance','Performance'],['holdings','Holdings & allocation']],['RESEARCH',['screening','Ethical screening'],['research','Research profiles'],['daily','Daily research']],['OPERATIONS',['tracking','Tracking inputs'],['exceptions','Exceptions & reviews'],['governance','Governance']]];
+const groups=[['EXPERIMENT',['overview','Overview'],['performance','Performance'],['holdings','Holdings & allocation']],['RESEARCH',['screening','Ethical screening'],['research','Research profiles'],['daily','Daily research']],['OPERATIONS',['tracking','Tracking inputs'],['exceptions','Exceptions & reviews'],['governance','Governance'],['about','About Ragwar Fintech']]];
 let state,revision=0,experimentId='001',period='1Y',query='',saving=false;
 const current=()=>state.experiments.find(x=>x.id===experimentId)??state.experiments[0];
 const page=()=>Object.hasOwn(paths,location.hash.slice(1))?location.hash.slice(1):'overview';
@@ -143,7 +144,27 @@ function governance(e){
  card(heading('Review history','Timestamped workspace changes')+(e.history.length?e.history.map(h=>'<div class="timeline"><strong>'+esc(h.label)+'</strong><br><small>'+esc(h.date.replace('T',' ').slice(0,16))+(h.date.includes('T')?' UTC':'')+' · '+esc(h.note)+'</small></div>').join(''):'<p>No reviews recorded.</p>'))+'</div>'+
  '<div class="records">'+e.governance.map(r=>record(r.title,badge(r.kind),r.note+(r.reviewer?'\n\nReviewer '+r.reviewer:'')+(r.date?' · '+r.date.slice(0,10):''),r.source)).join('')+'</div>';
 }
-const views={overview,performance:performancePage,holdings:holdingsPage,screening,research,daily,tracking,exceptions,governance};
+let aboutProfile;
+function about(){
+ if(!aboutProfile){
+  fetch('/api/profile').then(response=>{
+   if(!response.ok)throw Error('Profile unavailable');
+   return response.json();
+  }).then(payload=>{
+   aboutProfile=payload;
+   if(page()==='about')render();
+  }).catch(()=>{
+   if(page()==='about')$('profile-content').textContent='The profile could not be loaded. Reload to retry.';
+  });
+  return intro('About Ragwar Fintech','Investment research workspace')+boundary+card('<p id="profile-content" role="status">Loading profile…</p>');
+ }
+ const {profile,source}=aboutProfile;
+ return intro(esc(profile.name),esc(profile.tagline))+boundary+
+ '<div class="stack">'+card(heading('Profile',source==='contentful'?'Published through Contentful':'Built-in profile')+'<p class="break">'+esc(profile.overview)+'</p>')+
+ '<div class="split">'+card(heading('Research focus','Portfolio experiments and screening')+'<p class="break">'+esc(profile.researchFocus)+'</p>')+
+ card(heading('Methodology','Evidence and human review')+'<p class="break">'+esc(profile.methodology)+'</p>')+'</div></div>';
+}
+const views={about,overview,performance:performancePage,holdings:holdingsPage,screening,research,daily,tracking,exceptions,governance};
 function render(){
  if(!state)return;
  const id=page(),e=current();

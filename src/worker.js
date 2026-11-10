@@ -5,6 +5,9 @@ export default {async fetch(request, env) {
     const [type, body] = assets[path];
     return new Response(body, {headers:{...headers,'Content-Type':type,'Content-Security-Policy':"default-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'"}});
   }
+  if (path === '/api/profile' && request.method === 'GET') {
+    return Response.json(await getResearchProfile(env), {headers});
+  }
   if (path !== '/api/workspace') return new Response('Not found',{status:404});
   const json = (body,status=200) => Response.json(body,{status,headers});
   try {
