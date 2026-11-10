@@ -1,4 +1,4 @@
-# Ragwar Fintech Quote Tracker
+# Ragwar Fintech Research
 
 Source for the Ragwar Ethical Investments Platform, a paper portfolio and investment research workspace.
 
